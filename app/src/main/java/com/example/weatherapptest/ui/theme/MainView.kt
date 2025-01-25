@@ -153,14 +153,21 @@ fun MainView(viewModel: LocationViewModel){
     }
     desc.value = getWeatherDescription(weatherCode.intValue).uppercase(Locale.ROOT)
     icon.intValue = getWeatherIcon(desc.value, isDay.intValue)
-    color.value = getWeatherColor(desc.value)
+    color.value = getWeatherColor(desc.value, isDay.intValue)
+
+    var colorBack = Color.Black
+    var colorFront = Color.White
+    if (isDay.intValue == 1){
+        colorBack = Color.White
+        colorFront = Color.Black
+    }
 
     Card(
         colors = CardColors(
-            Color.Black,
-            Color.White,
-            Color.Black,
-            Color.White
+            colorBack,
+            colorFront,
+            colorBack,
+            colorFront
         )
     ){
         Column (modifier = Modifier
@@ -184,11 +191,22 @@ fun MainView(viewModel: LocationViewModel){
                 .fillMaxWidth()){
                 Image(painter = painterResource(id = icon.intValue), contentDescription = "Current Weather Icon", modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.Crop)
             }
-            Row (modifier = Modifier
-                .fillMaxWidth()
+            Row (modifier = Modifier.fillMaxWidth()
                 .height(180.dp), horizontalArrangement = Arrangement.SpaceBetween){
-                Text(text = temp.value, color = color.value, modifier = Modifier.padding(start = 30.dp), fontSize = 170.sp, fontFamily = FontFamily(Font(R.font.dongle)))
-                Text(text = desc.value, color = color.value, modifier = Modifier.padding(top = 85.dp, end = 30.dp), fontSize = 70.sp, fontFamily = FontFamily(Font(R.font.dongle)))
+                var description = desc.value
+                if (desc.value == "THUNDERSTORM") description = "T-STORM"
+                Text(text = temp.value, color = color.value, modifier = Modifier.padding(start = 20.dp), fontSize = 170.sp, fontFamily = FontFamily(Font(R.font.dongle)),style = TextStyle(
+                    shadow = Shadow(
+                        color = Color.Black,
+                        offset = Offset(2f, 2f),
+                        blurRadius = 2f
+                    )))
+                Text(text = description, color = color.value, modifier = Modifier.padding(top = 85.dp, end = 20.dp), fontSize = 70.sp, fontFamily = FontFamily(Font(R.font.dongle)), style = TextStyle(
+                    shadow = Shadow(
+                        color = Color.Black,
+                        offset = Offset(2f, 2f),
+                        blurRadius = 2f
+                    )))
             }
             Row (modifier = Modifier
                 .fillMaxWidth()
@@ -197,7 +215,7 @@ fun MainView(viewModel: LocationViewModel){
                     modifier = Modifier
                         .height(5.dp)
                         .clip(RoundedCornerShape(100.dp))
-                        .padding(start = 25.dp, end = 25.dp), color = Color.White
+                        .padding(start = 25.dp, end = 25.dp), color = colorFront
                 )
             }
 
@@ -222,22 +240,25 @@ fun MainView(viewModel: LocationViewModel){
                     modifier = Modifier
                         .height(5.dp)
                         .clip(RoundedCornerShape(100.dp))
-                        .padding(start = 25.dp, end = 25.dp), color = Color.White
+                        .padding(start = 25.dp, end = 25.dp), color = colorFront
                 )
             }
             Row(modifier = Modifier
                 .horizontalScroll(rememberScrollState())
                 .fillMaxWidth()) {
                 Spacer(modifier = Modifier.width(8.dp))
+                var isDayWeek = 1
+                if (isDay.intValue == 1)  isDayWeek = 0
                 hourlyTempList.value.take(24).forEachIndexed { index, temp ->
                     WeatherCard(
                         time = "${index.toString().padStart(2, '0')}:00",
                         temp = "${temp.roundToInt()}°",
-                        color = getWeatherColor(getWeatherDescription(hourlyWeatherList.value[index])),
-                        weatherIcon = getWeatherIcon(
+                        color = getWeatherColor(getWeatherDescription(hourlyWeatherList.value[index]), isDay.intValue),
+                        weatherIcon = getWeatherIconWeeklyHourly(
                             getWeatherDescription(hourlyWeatherList.value[index]),
-                            if (index in 0..6 || index in 19..23) 0 else 1
-                        )
+                            if (index in 0..6 || index in 19..23) 0 else 1,
+                            dayWeek = isDayWeek),
+                        isDay = isDay.intValue
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                 }
@@ -249,15 +270,15 @@ fun MainView(viewModel: LocationViewModel){
                     modifier = Modifier
                         .height(5.dp)
                         .clip(RoundedCornerShape(100.dp))
-                        .padding(start = 25.dp, end = 25.dp), color = Color.White
+                        .padding(start = 25.dp, end = 25.dp), color = colorFront
                 )
             }
             Column{
-                InfoCard(category = "Feels Like", value = apparentTemp.value, color = color.value)
+                InfoCard(category = "Feels Like", value = apparentTemp.value, color = color.value, isDay = isDay.intValue)
                 Spacer(Modifier.padding(5.dp))
-                InfoCard(category = "Humidity", value = humidity.value, color = color.value)
+                InfoCard(category = "Humidity", value = humidity.value, color = color.value, isDay = isDay.intValue)
                 Spacer(Modifier.padding(5.dp))
-                InfoCard(category = "AQI", value = aqi.value, color = color.value)
+                InfoCard(category = "AQI", value = aqi.value, color = color.value, isDay = isDay.intValue)
             }
             Spacer(modifier = Modifier.padding(10.dp))
             Row (modifier = Modifier
@@ -267,19 +288,22 @@ fun MainView(viewModel: LocationViewModel){
                     modifier = Modifier
                         .height(5.dp)
                         .clip(RoundedCornerShape(100.dp))
-                        .padding(start = 25.dp, end = 25.dp), color = Color.White
+                        .padding(start = 25.dp, end = 25.dp), color = colorFront
                 )
             }
             Row (modifier = Modifier
                 .horizontalScroll(rememberScrollState())
                 .fillMaxWidth()){
                 Spacer(modifier = Modifier.width(10.dp))
+                var isDayWeek = 1
+                if (isDay.intValue == 1)  isDayWeek = 0
                 weeklyTimeList.value.forEachIndexed{ index, time ->
                     WeeklyWeatherCard(
                         time = dayMap[LocalDate.parse(time).dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, Locale(Locale.getDefault().language))].toString(),
                         temp = "${((weeklyMaxTempList.value[index]+weeklyMinTempList.value[index])/2).roundToInt()}°",
-                        color = getWeatherColor(getWeatherDescription(hourlyWeatherList.value[index])),
-                        weatherIcon = getWeatherIcon(getWeatherDescription(weeklyWeatherList.value[index]), 1)
+                        color = getWeatherColor(getWeatherDescription(weeklyWeatherList.value[index]), isDay.intValue),
+                        weatherIcon = getWeatherIconWeeklyHourly(getWeatherDescription(weeklyWeatherList.value[index]), isDay.intValue, isDayWeek),
+                        isDay = isDay.intValue
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                 }
@@ -291,7 +315,7 @@ fun MainView(viewModel: LocationViewModel){
                     modifier = Modifier
                         .height(5.dp)
                         .clip(RoundedCornerShape(100.dp))
-                        .padding(start = 25.dp, end = 25.dp), color = Color.White
+                        .padding(start = 25.dp, end = 25.dp), color = colorFront
                 )
             }
         }
@@ -299,18 +323,24 @@ fun MainView(viewModel: LocationViewModel){
 }
 
 @Composable
-fun InfoCard(category: String, value: String, color: Color){
+fun InfoCard(category: String, value: String, color: Color, isDay: Int){
+    var colorBack = Color.Black
+    var colorFront = Color.White
+    if (isDay == 1){
+        colorBack = Color.White
+        colorFront = Color.Black
+    }
     Card(modifier = Modifier
         .fillMaxWidth()
         .padding(start = 25.dp, end = 25.dp),
         shape = RoundedCornerShape(30.dp),
-        colors = CardColors(Color.White,
-            Color.Black,
-            Color.White,
-            Color.Black),
+        colors = CardColors(colorFront,
+            colorBack,
+            colorFront,
+            colorBack),
         elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)) {
         Row (modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween){
-            Text(text = category, fontSize = 50.sp, modifier = Modifier.padding(start = 25.dp), color = Color.Black, fontFamily = FontFamily(Font(R.font.dongle)))
+            Text(text = category, fontSize = 50.sp, modifier = Modifier.padding(start = 25.dp), color = colorBack, fontFamily = FontFamily(Font(R.font.dongle)))
             Text(text = value, style = TextStyle(
                 shadow = Shadow(
                     color = Color.Black,
@@ -337,49 +367,117 @@ fun getWeatherIcon(weatherDescription: String, isDay: Int): Int {
     if (weatherDescription == "CLEAR" && isDay == 0) return R.drawable.moon
     if (weatherDescription == "CLOUDY" && isDay == 1) return R.drawable.sun_cloud
     if (weatherDescription == "CLOUDY" && isDay == 0) return R.drawable.moon_cloud
-    if (weatherDescription == "THUNDERSTORM") return R.drawable.thunderstorm
-    if (weatherDescription == "SNOW") return R.drawable.snow
-    if (weatherDescription == "RAIN") return R.drawable.rain
-    return if (weatherDescription == "ICE") R.drawable.ice
+    if (weatherDescription == "THUNDERSTORM" && isDay == 1) return R.drawable.thunderstorm_black
+    if (weatherDescription == "THUNDERSTORM" && isDay == 0) return R.drawable.thunderstorm
+    if (weatherDescription == "SNOW" && isDay == 1) return R.drawable.snow_black
+    if (weatherDescription == "SNOW" && isDay == 0) return R.drawable.snow
+    if (weatherDescription == "RAIN" && isDay == 1) return R.drawable.rain_black
+    if (weatherDescription == "RAIN" && isDay == 0) return R.drawable.rain
+    if (weatherDescription == "ICE" && isDay == 1) return R.drawable.ice_black
+    return if (weatherDescription == "ICE" && isDay == 0) R.drawable.ice
     else R.drawable.ic_launcher_foreground
 }
 
-fun getWeatherColor(weatherDescription: String): Color{
+fun getWeatherIconWeeklyHourly(weatherDescription: String, isDay: Int, dayWeek: Int): Int {
+    if (weatherDescription == "CLEAR" && isDay == 1 && dayWeek == 0) return R.drawable.sun
+    if (weatherDescription == "CLEAR" && isDay == 1 && dayWeek == 1) return R.drawable.sun_white
+    if (weatherDescription == "CLEAR" && isDay == 0 && dayWeek == 0) return R.drawable.moon_black
+    if (weatherDescription == "CLEAR" && isDay == 0 && dayWeek == 1) return R.drawable.moon
+    if (weatherDescription == "CLOUDY" && isDay == 1 && dayWeek == 0) return R.drawable.sun_cloud
+    if (weatherDescription == "CLOUDY" && isDay == 1 && dayWeek == 1) return R.drawable.sun_cloud_white
+    if (weatherDescription == "CLOUDY" && isDay == 0 && dayWeek == 0) return R.drawable.moon_cloud_black
+    if (weatherDescription == "CLOUDY" && isDay == 0 && dayWeek == 1) return R.drawable.moon_cloud
+    if (weatherDescription == "THUNDERSTORM" && isDay == 1 && dayWeek == 0) return R.drawable.thunderstorm_black
+    if (weatherDescription == "THUNDERSTORM" && isDay == 1 && dayWeek == 1) return R.drawable.thunderstorm
+    if (weatherDescription == "THUNDERSTORM" && isDay == 0 && dayWeek == 0) return R.drawable.thunderstorm_black
+    if (weatherDescription == "THUNDERSTORM" && isDay == 0 && dayWeek == 1) return R.drawable.thunderstorm
+    if (weatherDescription == "SNOW" && isDay == 1 && dayWeek == 0) return R.drawable.snow_black
+    if (weatherDescription == "SNOW" && isDay == 1 && dayWeek == 1) return R.drawable.snow
+    if (weatherDescription == "SNOW" && isDay == 0 && dayWeek == 0) return R.drawable.snow_black
+    if (weatherDescription == "SNOW" && isDay == 0 && dayWeek == 1) return R.drawable.snow
+    if (weatherDescription == "RAIN" && isDay == 1 && dayWeek == 0) return R.drawable.rain_black
+    if (weatherDescription == "RAIN" && isDay == 1 && dayWeek == 1) return R.drawable.rain
+    if (weatherDescription == "RAIN" && isDay == 0 && dayWeek == 0) return R.drawable.rain_black
+    if (weatherDescription == "RAIN" && isDay == 0 && dayWeek == 1) return R.drawable.rain
+    if (weatherDescription == "ICE" && isDay == 1 && dayWeek == 0) return R.drawable.ice_black
+    if (weatherDescription == "ICE" && isDay == 1 && dayWeek == 1) return R.drawable.ice
+    if (weatherDescription == "ICE" && isDay == 0 && dayWeek == 0) return R.drawable.ice_black
+    return if (weatherDescription == "ICE" && isDay == 0 && dayWeek == 1) R.drawable.ice
+    else R.drawable.ic_launcher_foreground
+}
+
+fun getWeatherColor(weatherDescription: String, isDay: Int): Color{
     if (weatherDescription == "CLEAR") return Color(0xFFFFD93B)
     if (weatherDescription == "CLOUDY") return Color(0xFFFFD3D3)
     if (weatherDescription == "THUNDERSTORM") return Color(0XFF244474)
     if (weatherDescription == "SNOW") return Color(0XFF4294FF)
     if (weatherDescription == "RAIN") return Color(0XFF2A98B7)
     return if (weatherDescription == "ICE") Color(0XFFA0C8D7)
-    else Color(0XFFFFFFFF)
-}
-
-@Composable
-fun WeatherCard(time: String, temp: String, color: Color, weatherIcon: Int){
-    Card (colors = CardColors(Color.Black,
-        Color.White,
-        Color.Black,
-        Color.White),
-        modifier = Modifier){
-        Text(text = time, color = color, fontSize = 50.sp, fontFamily = FontFamily(Font(R.font.dongle)))
-        Image(painter = painterResource(id = weatherIcon),contentDescription = "Current Weather Icon", modifier = Modifier
-            .height(80.dp)
-            .width(80.dp), contentScale = ContentScale.Crop)
-        Text(modifier = Modifier.padding(start = 25.dp), text = temp, color = color, fontSize = 50.sp, fontFamily = FontFamily(Font(R.font.dongle)))
+    else{
+        if (isDay == 0) Color(0XFFFFFFFF)
+        else Color(0XFF000000)
     }
 }
 
 @Composable
-fun WeeklyWeatherCard(time: String, temp: String, color: Color, weatherIcon: Int){
-    Card (colors = CardColors(Color.Black,
-        Color.White,
-        Color.Black,
-        Color.White)){
-        Text(modifier = Modifier.padding(start = 10.dp), text = time, color = color, fontSize = 50.sp, fontFamily = FontFamily(Font(R.font.dongle)))
+fun WeatherCard(time: String, temp: String, color: Color, weatherIcon: Int, isDay: Int){
+    var colorBack = Color.Black
+    var colorFront = Color.White
+    if (isDay == 1){
+        colorBack = Color.White
+        colorFront = Color.Black
+    }
+    Card (colors = CardColors(colorBack,
+        colorFront,
+        colorBack,
+        colorFront),
+        modifier = Modifier.padding(5.dp)){
+        Text(text = time, color = color, fontSize = 50.sp, fontFamily = FontFamily(Font(R.font.dongle)), style = TextStyle(
+            shadow = Shadow(
+                color = Color.Black,
+                offset = Offset(2f, 2f),
+                blurRadius = 2f
+            )))
         Image(painter = painterResource(id = weatherIcon),contentDescription = "Current Weather Icon", modifier = Modifier
             .height(80.dp)
             .width(80.dp), contentScale = ContentScale.Crop)
-        Text(modifier = Modifier.padding(start = 25.dp), text = temp, color = color, fontSize = 50.sp, fontFamily = FontFamily(Font(R.font.dongle)))
+        Text(modifier = Modifier.padding(start = 25.dp), text = temp, color = color, fontSize = 50.sp, fontFamily = FontFamily(Font(R.font.dongle)), style = TextStyle(
+            shadow = Shadow(
+                color = Color.Black,
+                offset = Offset(2f, 2f),
+                blurRadius = 2f
+            )))
+    }
+}
+
+@Composable
+fun WeeklyWeatherCard(time: String, temp: String, color: Color, weatherIcon: Int, isDay: Int){
+    var colorBack = Color.Black
+    var colorFront = Color.White
+    if (isDay == 1){
+        colorBack = Color.White
+        colorFront = Color.Black
+    }
+    Card (colors = CardColors(colorBack,
+        colorFront,
+        colorBack,
+        colorFront),
+        modifier = Modifier.padding(5.dp)){
+        Text(modifier = Modifier.padding(start = 10.dp), text = time, color = color, fontSize = 50.sp, fontFamily = FontFamily(Font(R.font.dongle)), style = TextStyle(
+            shadow = Shadow(
+                color = Color.Black,
+                offset = Offset(2f, 2f),
+                blurRadius = 2f
+            )))
+        Image(painter = painterResource(id = weatherIcon),contentDescription = "Current Weather Icon", modifier = Modifier
+            .height(80.dp)
+            .width(80.dp), contentScale = ContentScale.Crop)
+        Text(modifier = Modifier.padding(start = 25.dp), text = temp, color = color, fontSize = 50.sp, fontFamily = FontFamily(Font(R.font.dongle)),style = TextStyle(
+            shadow = Shadow(
+                color = Color.Black,
+                offset = Offset(2f, 2f),
+                blurRadius = 2f
+            )))
     }
 }
 
